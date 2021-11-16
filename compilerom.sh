@@ -47,8 +47,8 @@ sudo mkdir /mnt/ccache
 sudo mount ../.cache /mnt/ccache
 export CCACHE_DIR=/mnt/ccache
 . b*/e*
-lunch evolution_X00TD-user
-make evolution -j$(nproc --all) | tee log.txt
+lunch evolution_X00TD-userdebug
+make evolution-prod -j$(nproc --all) | tee log.txt
 else
 mkdir evo
 cd evo
@@ -62,8 +62,8 @@ sudo mkdir /mnt/ccache
 sudo mount ../.cache /mnt/ccache
 export CCACHE_DIR=/mnt/ccache
 . b*/e*
-lunch evolution_X00TD-user
-make evolution -j$(nproc --all) | tee log.txt
+lunch evolution_X00TD-userdebug
+make evolution-prod -j$(nproc --all) | tee log.txt
 fi
 fi
 if [ $BUILD = spice ]
