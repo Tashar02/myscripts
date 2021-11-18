@@ -63,7 +63,7 @@ else
 cd $WORK_DIR/toolchains
 mkdir clang
 cd clang
-wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android12-release/clang-r416183b1.tar.gz
+wget https://hitarashi.sayeed205.workers.dev/0:/clang-r416183b1.tar.gz
 tar -xvzf clang-r416183b1.tar.gz
 fi
 cd $WORK_DIR/kernel
