@@ -11,6 +11,11 @@ ID="-1001509079419"
 
 # Bot Token
 bottoken=$token
+if [ -z $token ]
+then
+echo "Bot token not set"
+read -p "Enter Bot token = " bottoken
+fi
 
 # Functions
 msg() {
@@ -38,6 +43,9 @@ fi
 if [ -d $WORK_DIR/kernel ]
 then
 echo "kernel dir exists"
+echo "Pulling recent changes"
+cd $WORK_DIR/kernel && git pull
+cd ../
 else
 git clone --depth=1 https://github.com/navin136/android_kernel_asus_X00TD $WORK_DIR/kernel
 fi
@@ -58,25 +66,32 @@ cd clang
 wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android12-release/clang-r416183b1.tar.gz
 tar -xvzf clang-r416183b1.tar.gz
 fi
+cd $WORK_DIR/kernel
+
+# Info
+DEVICE="Asus Zenfone Max Pro M1 (X00TD)"
+DATE=$(TZ=GMT-5:30 date +%d'-'%m'-'%y'_'%I':'%M)
+VERSION=$(make kernelversion)
+DISTRO=$(source /etc/os-release && echo $NAME)
+CORES=$(nproc --all)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+COMMIT_LOG=$(git log --oneline -n 1)
+COMPILER=$($WORK_DIR/toolchains/clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
 
 #Starting Compilation
-msg "<b>Build Started</b>"
+msg "<b>========VELOCITY Kernel========</b>%0A<b>Hey Navin!! Kernel Build Triggered !!</b>%0A<b>Device: </b><code>$DEVICE</code>%0A<b>Kernel Version: </b><code>$VERSION</code>%0A<b>Date: </b><code>$DATE</code>%0A<b>Host Distro: </b><code>$DISTRO</code>%0A<b>Host Core Count: </b><code>$CORES</code>%0A<b>Compiler Used: </b><code>$COMPILER</code>%0A<b>Branch: </b><code>$BRANCH</code>%0A<b>Last Commit: </b><code>$COMMIT_LOG</code>%0A<b>Build Coming !! Stay Online Bruh</b>"
 BUILD_START=$(date +"%s")
-cd $WORK_DIR/kernel
 export ARCH=arm64
 export SUBARCH=arm64
-DATE=$(date +%d'-'%m'-'%y'-'%R)
-K_DIR="$WORK_DIR/kernel"
 export PATH="$WORK_DIR/toolchains/gcc64/bin/:$WORK_DIR/toolchains/gcc32/bin/:$WORK_DIR/toolchains/clang/bin/:$PATH"
 cd $WORK_DIR/kernel
 make clean && make mrproper
-rm -f out/arch/arm64/boot/Image.gz-dtb
 make O=out X00TD_defconfig
 make -j$(nproc --all) O=out \
       CLANG_TRIPLE=aarch64-linux-gnu- \
       CROSS_COMPILE=aarch64-linux-android- \
       CROSS_COMPILE_ARM32=arm-linux-androideabi- \
-      CC=clang
+      CC=clang | tee log.txt
 
 #Zipping Into Flashable Zip
 if [ -f out/arch/arm64/boot/Image.gz-dtb ]
@@ -95,5 +110,5 @@ DIFF=$((BUILD_END - BUILD_START))
 file "$WORK_DIR/VELOCITY-$DATE.zip" "Build took : $((DIFF / 60)) minute(s) and $((DIFF % 60)) second(s)"
 
 else
-msg "<b>Build Errored!</b>"
+file "$WORK_DIR/kernel/log.txt" "Build Failed and took : $((DIFF / 60)) minute(s) and $((DIFF % 60)) second(s)"
 fi
