@@ -1,0 +1,34 @@
+### Usage of compilekernel.sh :
+
+1:
+~~~bash
+wget https://raw.githubusercontent.com/Navin136/myscripts/snow/compilekernel.sh
+~~~
+
+2:
+Replace "bottoken" with your Telegram bot token or leave it empty [you can enter after running script]
+
+3:
+Replace "ID" with ur Telegram group ID in compilekernel.sh and edit whatever upon your needs
+
+4:
+~~~bash
+chmod +x compilekernel.sh && bash compilekernel.sh
+~~~
+
+========================================================================================
+### Usage of compilerom.sh :
+
+1:
+~~~bash
+wget https://raw.githubusercontent.com/Navin136/myscripts/snow/compilerom.sh
+~~~
+
+2:
+edit git config --global user.name "user" and git config --global user.email "email address"
+then edit links of trees, source, HALs
+
+3:
+~~~bash
+chmod +x compilerom.sh && bash compilerom.sh
+~~~
