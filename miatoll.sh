@@ -14,7 +14,7 @@ MODEL=Xiaomi
 DEVICE=Miatoll
 
 # Kernel Version Code
-VERSION=BloodLust
+VERSION=v1
 
 # Kernel Defconfig
 DEFCONFIG=cust_defconfig
@@ -41,8 +41,8 @@ DATE=$(TZ=Asia/Kolkata date +"%Y%m%d-%T")
 TANGGAL=$(date +"%F%S")
 
 # Specify Final Zip Name
-ZIPNAME=aRise
-FINAL_ZIP=${ZIPNAME}-${VERSION}-${DEVICE}-KERNEL-${TANGGAL}.zip
+ZIPNAME=Nexus
+FINAL_ZIP=${ZIPNAME}-${VERSION}-${DEVICE}-${TANGGAL}.zip
 
 ##----------------------------------------------------------##
 # Specify compiler.
@@ -60,9 +60,9 @@ COMPILER=proton
 elif [ "$1" = "--aosp" ];
 then
 COMPILER=aosp
-elif [ "$1" = "--neutron" ];
+elif [ "$1" = "--atomx" ];
 then
-COMPILER=neutron
+COMPILER=atomx
 fi
 
 ##----------------------------------------------------------##
@@ -76,9 +76,6 @@ LINKER=ld.gold
 elif [ "$2" = "--bfd" ];
 then
 LINKER=ld.bfd
-elif [ "$2" = "--ld" ];
-then
-LINKER=ld
 fi
 
 ##----------------------------------------------------------##
@@ -88,13 +85,13 @@ function cloneTC() {
 	if [ $COMPILER = "azure" ];
 	then
 	post_msg " Cloning Azure Clang ToolChain "
-	git clone --depth=1  https://gitlab.com/ImSpiDy/azure-clang.git clang
+	git clone --depth=1  https://gitlab.com/Panchajanya1999/azure-clang.git clang
 	PATH="${KERNEL_DIR}/clang/bin:$PATH"
 	
-	elif [ $COMPILER = "neutron" ];
+	elif [ $COMPILER = "atomx" ];
 	then
-	post_msg " Cloning Neutron Clang ToolChain "
-	git clone --depth=1  https://github.com/Neutron-Clang/neutron-toolchain.git clang
+	post_msg " Cloning Atom-X Clang ToolChain "
+	git clone --depth=1  https://gitlab.com/ElectroPerf/atom-x-clang.git clang
 	PATH="${KERNEL_DIR}/clang/bin:$PATH"
 	
 	elif [ $COMPILER = "proton" ];
@@ -112,7 +109,7 @@ function cloneTC() {
 	
 	elif [ $COMPILER = "aosp" ];
 	then
-	post_msg " Cloning Aosp Clang 14.0.1 ToolChain "
+	post_msg " Cloning Aosp Clang ToolChain "
         mkdir aosp-clang
         cd aosp-clang || exit
 	wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r437112b.tar.gz
