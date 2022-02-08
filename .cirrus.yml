@@ -13,7 +13,9 @@ task:
   Build_script:
       - apt update && apt upgrade -y
       - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && date
-      - apt install -f -y git bison flex libxml2 libssl-dev bc zip default-jre python3 python3-pip wget curl cpio bash python2
+      - apt install -f -y git bison flex libxml2 locales libssl-dev bc zip default-jre python3 python3-pip wget curl dpkg cpio bash python2
+      - locale-gen en_US en_US.UTF-8
+      - dpkg-reconfigure locales
       - git clone --depth=1 https://github.com/reaPeR1010/android_kernel_xiaomi_miatoll XD && cd XD
       - curl https://raw.githubusercontent.com/reaPeR1010/myscripts/main/miatoll.sh -o build
       - bash build --atomx --lld
