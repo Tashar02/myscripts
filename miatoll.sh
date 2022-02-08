@@ -233,7 +233,7 @@ START=$(date +"%s")
 	       STRIP=llvm-strip \
 	       READELF=llvm-readelf \
 	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee error.log
+	       V=$VERBOSE 2>&1 | tee build.log
 	elif [ -d ${KERNEL_DIR}/gcc64 ];
 	   then
 	       make -kj$(nproc --all) O=out \
@@ -247,7 +247,7 @@ START=$(date +"%s")
 	       OBJDUMP=llvm-objdump \
 	       STRIP=llvm-strip \
 	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee error.log
+	       V=$VERBOSE 2>&1 | tee build.log
         elif [ -d ${KERNEL_DIR}/aosp-clang ];
            then
                make -kj$(nproc --all) O=out \
@@ -266,13 +266,13 @@ START=$(date +"%s")
                STRIP=llvm-strip \
 	       READELF=llvm-readelf \
 	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee error.log
+	       V=$VERBOSE 2>&1 | tee build.log
 	fi
 	
 	# Verify Files
 	if ! [ -a "$IMAGE" ];
 	   then
-	       push "error.log" "Build Throws Errors"
+	       push "build.log" "Build Throws Errors"
 	       exit 1
 	   else
 	       post_msg " Kernel Compilation Finished. Started Zipping "
@@ -291,6 +291,7 @@ function zipping() {
         zip -r9 ${FINAL_ZIP} *
         MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
         push "$FINAL_ZIP" "Build took : $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) | For <b>$MODEL ($DEVICE)</b> | <b>${KBUILD_COMPILER_STRING}</b> | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"
+        push "build.log" "Build Completed Successfully"
         cd ..
         }
     
