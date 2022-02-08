@@ -159,10 +159,17 @@ function exports() {
               then
                   export KBUILD_BUILD_VERSION=${CIRCLE_BUILD_NUM}
                   export CI_BRANCH=${CIRCLE_BRANCH}
+                  export CL=${CIRCLE_SHA1}
            elif [ "$DRONE" ]
 	      then
 		  export KBUILD_BUILD_VERSION=${DRONE_BUILD_NUMBER}
 		  export CI_BRANCH=${DRONE_BRANCH}
+                  export CL=${DRONE_COMMIT_LINK}
+           elif [ "$CIRRUS_CI" ]
+              then
+                  export KBUILD_BUILD_VERSION=${CIRRUS_BUILD_ID}
+                  export CI_BRANCH=${CIRRUS_BRANCH}
+                  export CL=${CIRRUS_CHANGE_TITLE}
            fi
 		   
         fi
@@ -212,7 +219,7 @@ function configs() {
 function compile() {
 START=$(date +"%s")
 	# Push Notification
-	post_msg "<b>$KBUILD_BUILD_VERSION CI Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=Asia/Kolkata date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Linker : </b><code>$LINKER</code>%0a<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>Top Commit : </b><a href='$DRONE_COMMIT_LINK'>$COMMIT_HEAD</a>"
+	post_msg "<b>$KBUILD_BUILD_VERSION CI Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=Asia/Kolkata date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Linker : </b><code>$LINKER</code>%0a<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>Top Commit : </b><a href='$CL'>$COMMIT_HEAD</a>"
 	
 	# Compile
 	make O=out ${DEFCONFIG}
