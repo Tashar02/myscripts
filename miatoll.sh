@@ -167,7 +167,7 @@ function exports() {
                   export CL=${DRONE_COMMIT_LINK}
            elif [ "$CIRRUS_CI" ]
               then
-                  export KBUILD_BUILD_VERSION=${CIRRUS_BUILD_ID}
+                  export KBUILD_BUILD_VERSION=${CIRRUS_TASK_ID}
                   export CI_BRANCH=${CIRRUS_BRANCH}
                   export CL=${CIRRUS_CHANGE_TITLE}
            fi
