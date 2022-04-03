@@ -1,185 +1,89 @@
-#!/usr/bin/env bash
+#bin/#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0
+# Copyright © 2022,
+# Author(s): Divyanshu-Modi <divyan.m05@gmail.com>, Tashfin Shakeer Rhythm <tashfinshakeerrhythm@gmail.com>
+# Revision: 03-04-2022
 
- #
- # Script For Building Android Kernel
- #
+# USER
+	USER='Tashar'
+	HOST='Cirrus'
 
-##----------------------------------------------------------##
-# Specify Kernel Directory
-KERNEL_DIR="$(pwd)"
+# SCRIPT CONFIG
+	SILENCE='0'
+	SDFCF='1'
+	BUILD='clean'
 
-##----------------------------------------------------------##
-# Device Name and Model
-MODEL=Xiaomi
-DEVICE=Miatoll
+# DEVICE CONFIG
+	NAME='Mi A2 / 6X'
+	DEVICE='wayne'
+	DEVICE2=''
+	CAM_LIB='3'
 
-# Kernel Version Code
-VERSION=v1
+# PATH
+	KERNEL_DIR=`pwd`
+	ZIP_DIR="$KERNEL_DIR/Repack"
+	AKSH="$ZIP_DIR/anykernel.sh"
+	cd $KERNEL_DIR
 
-# Kernel Defconfig
-DEFCONFIG=cust_defconfig
+# DEFCONFIG
+	DFCF="vendor/${DEVICE}-oss-perf_defconfig"
+	CONFIG="$KERNEL_DIR/arch/arm64/configs/$DFCF"
 
-# Select LTO variant ( Full LTO by default )
-DISABLE_LTO=0
-THIN_LTO=0
+# COLORS
+	R='\033[1;31m'
+	G='\033[1;32m'
+	Y='\033[1;33m'
+	B='\033[1;34m'
+	W='\033[1;37m'
 
-# Files
-IMAGE=$(pwd)/out/arch/arm64/boot/Image.gz
-DTBO=$(pwd)/out/arch/arm64/boot/dtbo.img
-DTB=$(pwd)/out/arch/arm64/boot/dts/qcom/cust-atoll-ab.dtb
+error () {
+	echo -e ""
+	echo -e "$R Error! $Y$1"
+	echo -e ""
+	exit 1
+}
 
-# Verbose Build
-VERBOSE=0
-
-# Kernel Version
-KERVER=$(make kernelversion)
-
-COMMIT_HEAD=$(git log --oneline -1)
-
-# Date and Time
-DATE=$(TZ=Asia/Kolkata date +"%Y%m%d-%T")
-TANGGAL=$(date +"%F%S")
-
-# Specify Final Zip Name
-ZIPNAME=Nexus
-FINAL_ZIP=${ZIPNAME}-${VERSION}-${DEVICE}-${TANGGAL}.zip
-
-##----------------------------------------------------------##
-# Specify compiler.
-
-if [ "$1" = "--eva" ];
-then
-COMPILER=eva
-GCC_OPT=1
-elif [ "$1" = "--azure" ];
-then
-COMPILER=azure
-elif [ "$1" = "--proton" ];
-then
-COMPILER=proton
-elif [ "$1" = "--aosp" ];
-then
-COMPILER=aosp
-elif [ "$1" = "--atomx" ];
-then
-COMPILER=atomx
+if [[ "$USER" == "" ]]; then
+	clear
+	echo -ne "$G \n User not defined! Manual input required :$W "
+	read -r USER
+fi
+if [[ "$HOST" == "" ]]; then
+	clear
+	echo -ne "$G \n Host not defined! Manual input required :$W "
+	read -r HOST
+fi
+if [[ "$SILENCE" == "1" ]]; then
+	FLAG=-s
 fi
 
-##----------------------------------------------------------##
-# Specify Linker
-if [ "$2" = "--lld" ];
-then
-LINKER=ld.lld
-elif [ "$2" = "--gold" ];
-then
-LINKER=ld.gold
-elif [ "$2" = "--bfd" ];
-then
-LINKER=ld.bfd
-fi
+# Select the compiler
+compiler_selection () {
+	echo -e "                 $G Compiler Selection $R            "
+	echo -e " ╔══════════════════════════════════════════════════╗"
+	echo -e " ║$G 1. CLANG                                         $R║"
+	echo -e " ║$G 2. GCC                                           $R║"
+	echo -e " ║$G e. EXIT                                          $R║"
+	echo -e " ╚══════════════════════════════════════════════════╝"
+	echo -ne "$G \n Enter your choice or press 'e' for back to shell:$W "
 
-##----------------------------------------------------------##
-# Clone ToolChain
-function cloneTC() {
-	
-	if [ $COMPILER = "azure" ];
-	then
-	post_msg " Cloning Azure Clang ToolChain "
-	git clone --depth=1  https://gitlab.com/Panchajanya1999/azure-clang.git clang
-	PATH="${KERNEL_DIR}/clang/bin:$PATH"
-	
-	elif [ $COMPILER = "atomx" ];
-	then
-	post_msg " Cloning Atom-X Clang ToolChain "
-	git clone --depth=1  https://gitlab.com/ElectroPerf/atom-x-clang.git clang
-	PATH="${KERNEL_DIR}/clang/bin:$PATH"
-	
-	elif [ $COMPILER = "proton" ];
-	then
-	post_msg " Cloning Proton Clang ToolChain "
-	git clone --depth=1  https://github.com/kdrag0n/proton-clang.git clang
-	PATH="${KERNEL_DIR}/clang/bin:$PATH"
-	
-	elif [ $COMPILER = "eva" ];
-	then
-	post_msg " Cloning Eva GCC ToolChain "
-	git clone --depth=1 https://github.com/mvaisakh/gcc-arm64.git -b gcc-new gcc64
-	git clone --depth=1 https://github.com/mvaisakh/gcc-arm.git -b gcc-new gcc32
-	PATH=$KERNEL_DIR/gcc64/bin/:$KERNEL_DIR/gcc32/bin/:/usr/bin:$PATH
-	
-	elif [ $COMPILER = "aosp" ];
-	then
-	post_msg " Cloning Aosp Clang ToolChain "
-        mkdir aosp-clang
-        cd aosp-clang || exit
-	wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r437112b.tar.gz
-        tar -xf clang*
-        cd .. || exit
-	git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
-	git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
-	PATH="${KERNEL_DIR}/aosp-clang/bin:${KERNEL_DIR}/gcc/bin:${KERNEL_DIR}/gcc32/bin:${PATH}"
+	read -r selector
+
+	if [[ "$selector" == "1" ]]; then
+		COMPILER='clang'
+		pass
+	elif [[ "$selector" == "2" ]]; then
+		COMPILER='gcc'
+		pass
+	elif [[ "$selector" == "e" ]]; then
+		clear || exit
+	else
+		clear
+		error 'Compiler not defined'
 	fi
-        # Clone AnyKernel
-        git clone --depth=1 https://github.com/reaPeR1010/AnyKernel3
+}
 
-	}
-	
-##------------------------------------------------------##
-# Export Variables
-function exports() {
-	
-        # Export KBUILD_COMPILER_STRING
-        if [ -d ${KERNEL_DIR}/clang ];
-           then
-               export KBUILD_COMPILER_STRING=$(${KERNEL_DIR}/clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
-        elif [ -d ${KERNEL_DIR}/gcc64 ];
-           then
-               export KBUILD_COMPILER_STRING=$("$KERNEL_DIR/gcc64"/bin/aarch64-elf-gcc --version | head -n 1)
-        elif [ -d ${KERNEL_DIR}/aosp-clang ];
-            then
-               export KBUILD_COMPILER_STRING=$(${KERNEL_DIR}/aosp-clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
-        fi
-        
-        # Export ARCH and SUBARCH
-        export ARCH=arm64
-        export SUBARCH=arm64
-        
-        # Export Local Version
-        export LOCALVERSION="-${VERSION}"
-        
-        # KBUILD HOST and USER
-        export KBUILD_BUILD_HOST=ArchLinux
-        export KBUILD_BUILD_USER="RoHaN"
-        
-        # CI
-        if [ "$CI" ]
-           then
-               
-           if [ "$CIRCLECI" ]
-              then
-                  export KBUILD_BUILD_VERSION=${CIRCLE_BUILD_NUM}
-                  export CI_BRANCH=${CIRCLE_BRANCH}
-                  export CL=${CIRCLE_SHA1}
-           elif [ "$DRONE" ]
-	      then
-		  export KBUILD_BUILD_VERSION=${DRONE_BUILD_NUMBER}
-		  export CI_BRANCH=${DRONE_BRANCH}
-                  export CL=${DRONE_COMMIT_LINK}
-           elif [ "$CIRRUS_CI" ]
-              then
-                  export KBUILD_BUILD_VERSION=${CIRRUS_TASK_ID}
-                  export CI_BRANCH=${CIRRUS_BRANCH}
-                  export CL=${CIRRUS_CHANGE_TITLE}
-           fi
-		   
-        fi
-	export PROCS=$(nproc --all)
-	export DISTRO=$(source /etc/os-release && echo "${NAME}")
-	}
-        
-##----------------------------------------------------------------##
 # Telegram Bot Integration
-
 function post_msg() {
 	curl -s -X POST "https://api.telegram.org/bot$token/sendMessage" \
 	-d chat_id="$chat_id" \
@@ -195,121 +99,181 @@ function push() {
 	-F "parse_mode=html" \
 	-F caption="$2"
 	}
-##----------------------------------------------------------------##
-# Export Configs
-function configs() {
-    if [ -d ${KERNEL_DIR}/clang ] || [ -d ${KERNEL_DIR}/aosp-clang  ]; then
-       if [ $DISABLE_LTO = "1" ]; then
-          sed -i 's/CONFIG_LTO_CLANG=y/# CONFIG_LTO_CLANG is not set/' arch/arm64/configs/cust_defconfig
-          sed -i 's/CONFIG_LTO=y/# CONFIG_LTO is not set/' arch/arm64/configs/cust_defconfig
-          sed -i 's/# CONFIG_LTO_NONE is not set/CONFIG_LTO_NONE=y/' arch/arm64/configs/cust_defconfig
-       elif [ $THIN_LTO = "1" ]; then
-          sed -i 's/# CONFIG_THINLTO is not set/CONFIG_THINLTO=y/' arch/arm64/configs/cust_defconfig
-       fi
-    elif [ -d ${KERNEL_DIR}/gcc64 ]; then
-       sed -i 's/CONFIG_LLVM_POLLY=y/# CONFIG_LLVM_POLLY is not set/' arch/arm64/configs/cust_defconfig
-       sed -i 's/# CONFIG_GCC_GRAPHITE is not set/CONFIG_GCC_GRAPHITE=y/' arch/arm64/configs/cust_defconfig
-       if ! [ $DISABLE_LTO = "1" ]; then
-          sed -i 's/# CONFIG_LTO_GCC is not set/CONFIG_LTO_GCC=y/' arch/arm64/configs/cust_defconfig
-       fi
-    fi
+
+# Clone toolchains
+#git clone --depth=1 https://github.com/mvaisakh/gcc-arm64 -b gcc-master $KERNEL_DIR/gcc64
+git clone --depth=1 https://github.com/mvaisakh/gcc-arm -b gcc-master $KERNEL_DIR/gcc32
+git clone --depth=1 https://gitlab.com/dakkshesh07/neutron-clang.git -b Neutron-15 $KERNEL_DIR/clang
+git clone --depth=1 https://github.com/Tashar02/AnyKernel3-4.19.git -b main $KERNEL_DIR/Repack
+git clone --depth=1 https://github.com/Atom-X-Devs/android_kernel_xiaomi_scarlet.git -b test-QTI-2 $KERNEL_DIR/Kernel
+
+# Flags to be passed to compile
+pass() {
+	if [[ "$COMPILER" == "clang" ]]; then
+		CC='clang'
+		HOSTCC="$CC"
+		HOSTCXX="$CC++"
+		CC_64='aarch64-linux-gnu-'
+		C_PATH="$KERNEL_DIR/clang"
+	elif [[ "$COMPILER" == "gcc" ]]; then
+		HOSTCC='gcc'
+		CC_64='aarch64-elf-'
+		CC='aarch64-elf-gcc'
+		HOSTCXX='aarch64-elf-g++'
+		C_PATH="$KERNEL_DIR/gcc64/bin:$KERNEL_DIR/gcc32/"
+	else
+		clear
+		error 'Value not recognized'
+	fi
+		CC_32="$KERNEL_DIR/gcc32/bin/arm-eabi-"
+		CC_COMPAT="$KERNEL_DIR/gcc32/bin/arm-eabi-gcc"
+		build
 }
-##----------------------------------------------------------##
+export PATH=$C_PATH/bin:$PATH
+
 # Compilation
-function compile() {
-START=$(date +"%s")
-	# Push Notification
-	post_msg "<b>$KBUILD_BUILD_VERSION CI Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=Asia/Kolkata date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Linker : </b><code>$LINKER</code>%0a<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>Top Commit : </b><a href='$CL'>$COMMIT_HEAD</a>"
-	
-	# Compile
-	make O=out ${DEFCONFIG}
-	if [ -d ${KERNEL_DIR}/clang ];
-	   then
-	       make -kj$(nproc --all) O=out \
-	       ARCH=arm64 \
-	       CC=clang \
-	       HOSTCC=clang \
-	       HOSTCXX=clang++ \
-	       CROSS_COMPILE=aarch64-linux-gnu- \
-	       CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-	       LD=${LINKER} \
-	       AR=llvm-ar \
-	       NM=llvm-nm \
-	       OBJCOPY=llvm-objcopy \
-	       OBJDUMP=llvm-objdump \
-	       STRIP=llvm-strip \
-	       READELF=llvm-readelf \
-	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee build.log
-	elif [ -d ${KERNEL_DIR}/gcc64 ];
-	   then
-	       make -kj$(nproc --all) O=out \
-	       ARCH=arm64 \
-	       CROSS_COMPILE_ARM32=arm-eabi- \
-	       CROSS_COMPILE=aarch64-elf- \
-	       LD=aarch64-elf-${LINKER} \
-	       AR=llvm-ar \
-	       NM=llvm-nm \
-	       OBJCOPY=llvm-objcopy \
-	       OBJDUMP=llvm-objdump \
-	       STRIP=llvm-strip \
-	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee build.log
-        elif [ -d ${KERNEL_DIR}/aosp-clang ];
-           then
-               make -kj$(nproc --all) O=out \
-	       ARCH=arm64 \
-	       CC=clang \
-               HOSTCC=clang \
-	       HOSTCXX=clang++ \
-	       CLANG_TRIPLE=aarch64-linux-gnu- \
-	       CROSS_COMPILE=aarch64-linux-android- \
-	       CROSS_COMPILE_ARM32=arm-linux-androideabi- \
-	       LD=${LINKER} \
-	       AR=llvm-ar \
-	       NM=llvm-nm \
-	       OBJCOPY=llvm-objcopy \
-	       OBJDUMP=llvm-objdump \
-               STRIP=llvm-strip \
-	       READELF=llvm-readelf \
-	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee build.log
+muke () {
+	make O=work $CFLAG ARCH=arm64 $FLAG	     \
+			CC=$CC                           \
+			LLVM=1                           \
+			LLVM_IAS=1                       \
+			PYTHON=python3                   \
+			KBUILD_BUILD_USER=$USER          \
+			KBUILD_BUILD_HOST=$HOST          \
+			DTC_EXT=$(which dtc)             \
+			AS=llvm-as                       \
+			AR=llvm-ar                       \
+			NM=llvm-nm                       \
+			LD=ld.lld                        \
+			STRIP=llvm-strip                 \
+			OBJCOPY=llvm-objcopy             \
+			OBJDUMP=llvm-objdump             \
+			OBJSIZE=llvm-objsize             \
+			HOSTLD=ld.lld                    \
+			HOSTCC=$HOSTCC                   \
+			HOSTCXX=$HOSTCXX                 \
+			HOSTAR=llvm-ar                   \
+			PATH=$C_PATH/bin:$PATH           \
+			CROSS_COMPILE=$CC_64             \
+			CC_COMPAT=$CC_COMPAT             \
+			CROSS_COMPILE_COMPAT=$CC_32      \
+			LD_LIBRARY_PATH=$C_PATH/lib:$LD_LIBRARY_PATH
+}
+
+# Cleanup the build environment
+build () {
+	clear
+	if [[ "$BUILD" == "clean" ]]; then
+		rm -rf work || mkdir work
+	else
+		make O=work clean mrproper distclean
 	fi
-	
-	# Verify Files
-	if ! [ -a "$IMAGE" ];
-	   then
-	       push "build.log" "Build Throws Errors"
-	       exit 1
-	   else
-	       post_msg " Kernel Compilation Finished. Started Zipping "
+	compile
+}
+
+# BUILD-START
+compile () {
+	CFLAG=$DFCF
+	muke
+
+	echo -e "$B"
+	echo -e "                Build started                "
+	echo -e "$G"
+
+	BUILD_START=$(date +"%s")
+
+	CFLAG=-j$(nproc --all)
+	muke
+
+# BUILD-END
+	BUILD_END=$(date +"%s")
+
+	echo -e "$B"
+	echo -e "                Zipping started                "
+	echo -e "$W"
+	check
+}
+
+# Check for AnyKernel3
+check () {
+	if [[ -f $KERNEL_DIR/work/arch/arm64/boot/Image.gz-dtb ]]; then
+		if [[ -d $ZIP_DIR ]]; then
+			zip_ak
+		else
+			error "Anykernel is not present, cannot zip"
+		fi
+	else
+		push "build.log" "Build Throws Errors"
 	fi
-	}
+}
 
-##----------------------------------------------------------------##
-function zipping() {
-	# Copy Files To AnyKernel3 Zip
-	cp $IMAGE AnyKernel3
-	cp $DTBO AnyKernel3
-        cp $DTB AnyKernel3/dtb
-	
-	# Zipping and Push Kernel
-	cd AnyKernel3 || exit 1
-        zip -r9 ${FINAL_ZIP} *
-        MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
-        push "$FINAL_ZIP" "Build took : $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) | For <b>$MODEL ($DEVICE)</b> | <b>${KBUILD_COMPILER_STRING}</b> | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"
-        cd ..
-        push "build.log" "Build Completed Successfully"
-        }
-    
-##----------------------------------------------------------##
+# Zipping with AnyKernel3
+zip_ak () {
+	source work/.config
 
-cloneTC
-exports
-configs
-compile
-END=$(date +"%s")
-DIFF=$(($END - $START))
-zipping
+	FDEVICE=${DEVICE^^}
+	KNAME=$(echo "$CONFIG_LOCALVERSION" | cut -c 2-)
 
-##----------------*****-----------------------------##
+	if [[ "$CONFIG_LTO_CLANG_THIN" != "y" && "$CONFIG_LTO_CLANG_FULL" == "y" ]]; then
+		VARIANT='FULL_LTO'
+	elif [[ "$CONFIG_LTO_CLANG_THIN" == "y" && "$CONFIG_LTO_CLANG_FULL" == "y" ]]; then
+		VARIANT='THIN_LTO'
+	else
+		VARIANT='NON_LTO'
+	fi
+
+case $CAM_LIB in 
+	1)
+	   CAM=NEW-CAM
+	;;
+	2)
+	   CAM=OLD-CAM
+	;;
+	3)
+	   CAM=OSS-CAM
+	;;
+esac
+
+	cp $KERNEL_DIR/work/arch/arm64/boot/Image.gz-dtb $ZIP_DIR/
+
+	sed -i "s/demo1/$DEVICE/g" $AKSH
+	if [[ "$DEVICE2" != "" ]]; then
+		sed -i "/device.name1/ a device.name2=$DEVICE2" $AKSH
+	fi
+
+	cd $ZIP_DIR
+
+	FINAL_ZIP="$KNAME-$CAM-$FDEVICE-$VARIANT-`date +"%H%M"`"
+	zip -r9 "$FINAL_ZIP".zip * -x README.md *placeholder zipsigner*
+	java -jar zipsigner* "$FINAL_ZIP.zip" "$FINAL_ZIP-signed.zip"
+	FINAL_ZIP="$FINAL_ZIP-signed.zip"
+	push "$FINAL_ZIP"
+
+	sed -i "s/$DEVICE/demo1/g" $AKSH
+	if [[ "$DEVICE2" != "" ]]; then
+		sed -i "/device.name2/d" $AKSH
+	fi
+
+	cd $KERNEL_DIR
+ 	post_msg "
+ 	Compiler: $W$CONFIG_CC_VERSION_TEXT$G
+ 	Linux Version: $W$KV$G
+ 	Maintainer: $W$USER$G
+ 	Device: $W$NAME$G
+ 	Codename: $W$DEVICE$G
+ 	Cam-lib: $W$CAM$G
+ 	Zipname: $W$FINAL_ZIP$G
+ 	Build Date: $W$(date +"%Y-%m-%d %H:%M")$G
+ 	Build Duration: $W$(($DIFF / 60)).$(($DIFF % 60)) mins\
+ 	"
+
+ 	push "build.log" "Build Completed Successfully"
+	exit 0
+}
+
+if [[ "$1" == "" ]]; then
+	compiler_selection
+else
+	COMPILER="$1"
+	pass
+fi
